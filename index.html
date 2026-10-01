@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="An adaptive maths test that estimates a child's maths age in six-month steps from 4 to 16.">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+<title>Number Ladder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<style>
+/* Layout: one-column exercise-book sheet on squared paper; question number sits in the red margin; keypad docked at the bottom for thumbs. */
+:root{
+  --paper:#F5F8FC; --grid:#DDE7F3; --sheet:#FFFFFF; --ink:#1A2745; --ink-2:#5B6887; --line:#C9D5E6;
+  --margin:#D9463E; --hi:#FFD23F; --hi-ink:#1A2745; --hi-soft:#FFF4C4; --pass:#1F8A5B; --dot:#2B5FD9; --key:#EAF0F8;
+  --display:"Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", Verdana, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#101A27; --grid:#1A2839; --sheet:#16222F; --ink:#E6EDF7; --ink-2:#9AA9C0; --line:#2A3B50;
+  --margin:#FF6F66; --hi:#F2C53D; --hi-ink:#16202C; --hi-soft:#3A3318; --pass:#4CC48A; --dot:#7EA6FF; --key:#1F2E40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#101A27; --grid:#1A2839; --sheet:#16222F; --ink:#E6EDF7; --ink-2:#9AA9C0; --line:#2A3B50;
+  --margin:#FF6F66; --hi:#F2C53D; --hi-ink:#16202C; --hi-soft:#3A3318; --pass:#4CC48A; --dot:#7EA6FF; --key:#1F2E40; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font:17px/1.5 var(--body);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;-webkit-tap-highlight-color:transparent}
+#app{max-width:560px;margin:0 auto;padding-inline:16px;min-height:100%;display:flex;flex-direction:column}
+.screen{flex:1;display:flex;flex-direction:column;gap:20px;padding-block:20px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--dot);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+.eyebrow{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:0;font-weight:700}
+
+/* sheet with exercise-book margin */
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:6px;position:relative;
+  padding:22px 20px 22px 58px;box-shadow:0 1px 0 var(--line)}
+.sheet::before{content:"";position:absolute;top:0;bottom:0;left:42px;width:2px;background:var(--margin);opacity:.75}
+
+/* intro */
+.brand{display:flex;flex-direction:column;gap:10px}
+.brand h1{font-size:clamp(40px,12vw,60px);font-weight:800;letter-spacing:-.02em}
+.brand p{margin:0;color:var(--ink-2);max-width:34ch}
+.rungs{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;align-items:end;height:44px;margin-top:6px}
+.rungs span{background:var(--ink);opacity:.18;border-radius:2px}
+.rungs span:nth-child(odd){opacity:.45}
+.rungs-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.form{display:flex;flex-direction:column;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.field .lab{font-weight:700;font-size:15px}
+.field input,.field select{background:var(--paper);border:1.5px solid var(--line);border-radius:6px;padding:12px;min-height:48px;width:100%;box-sizing:border-box}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink-2)}
+.check input{width:22px;height:22px;margin:0;accent-color:var(--dot);flex:none}
+.primary{background:var(--hi);color:var(--hi-ink);border:0;border-radius:8px;min-height:56px;font-family:var(--display);font-weight:800;font-size:20px;
+  box-shadow:0 3px 0 color-mix(in srgb,var(--hi) 55%,var(--ink));}
+.primary:active{transform:translateY(2px);box-shadow:0 1px 0 color-mix(in srgb,var(--hi) 55%,var(--ink))}
+.fine{font-size:14px;color:var(--ink-2);margin:0}
+
+/* test */
+#test{gap:14px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ghost{background:transparent;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;font-size:15px;min-height:40px;color:var(--ink-2)}
+.ghost.warn{border-color:var(--margin);color:var(--margin)}
+#qnum{font-weight:700;font-variant-numeric:tabular-nums}
+#test .sheet{flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;min-height:220px}
+.qmark{position:absolute;left:0;width:42px;top:22px;text-align:center;font-family:var(--display);font-weight:800;color:var(--margin);font-size:20px}
+.prompt{font-size:clamp(30px,9vw,46px);font-weight:700;line-height:1.25;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+.prompt.long{font-size:clamp(21px,5.6vw,26px);line-height:1.4}
+.prompt .sub{display:block;font-size:.55em;font-weight:400;color:var(--ink-2);margin-top:6px}
+.answer{min-height:64px;border-bottom:3px dashed var(--line);font-size:clamp(30px,9vw,44px);font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:4px}
+.answer .caret{width:3px;height:1em;background:var(--dot);animation:blink 1s steps(1) infinite}
+.answer.ok{border-bottom-color:var(--pass);color:var(--pass)}
+.answer.bad{border-bottom-color:var(--margin);color:var(--margin)}
+.written{animation:write .3s ease-out}
+@keyframes blink{50%{opacity:0}}
+@keyframes write{from{opacity:.3;transform:translateY(4px)}}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:4px}
+.key{background:var(--key);border:0;border-radius:10px;min-height:58px;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;box-shadow:0 2px 0 var(--line)}
+.key:active{transform:translateY(2px);box-shadow:none}
+.key.enter{grid-column:span 2;background:var(--hi);color:var(--hi-ink);font-family:var(--display);font-size:22px;box-shadow:0 2px 0 color-mix(in srgb,var(--hi) 55%,var(--ink))}
+.key.small{font-size:20px}
+.choices{display:flex;flex-direction:column;gap:10px;padding-bottom:4px}
+.choice{display:flex;align-items:center;gap:14px;text-align:left;background:var(--sheet);border:1.5px solid var(--line);border-radius:10px;padding:12px 16px;min-height:60px;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.choice b{font-family:var(--display);font-size:15px;color:var(--ink-2);width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;flex:none}
+.choice.ok{border-color:var(--pass);color:var(--pass)}
+.choice.bad{border-color:var(--margin);color:var(--margin)}
+
+/* maths notation */
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;font-size:.78em;line-height:1.1;margin:0 .12em}
+.fr>span:first-child{border-bottom:.09em solid currentColor;padding:0 .15em}
+.rad{border-top:.08em solid currentColor;padding-left:.08em;margin-left:.02em}
+sup{font-size:.6em;line-height:0}
+.dots{display:inline-grid;gap:8px;padding:12px;border:1.5px solid var(--line);border-radius:8px;margin-top:10px}
+.dots i{width:30px;height:30px;border-radius:50%}
+.dots i.on{background:var(--dot)}
+
+/* result */
+.res-head{display:flex;flex-direction:column;gap:8px}
+#ageBig{font-size:clamp(40px,12vw,58px);font-weight:800;letter-spacing:-.02em}
+#compare{margin:0;font-size:18px}
+.skills{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.skills{grid-template-columns:1fr}}
+.skill{padding:14px 16px;border-radius:8px;border:1.5px solid var(--line);background:var(--sheet);display:flex;flex-direction:column;gap:4px;min-width:0}
+.skill.sec{border-color:var(--pass)}
+.skill p{margin:0}
+.skill .eyebrow{font-size:12px}
+.ladder{list-style:none;margin:0;padding:0;background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding-block:8px}
+.ladder li{display:grid;grid-template-columns:62px 36px 1fr auto;align-items:center;gap:0 10px;padding-inline:12px 14px;min-height:38px}
+.lage{font-size:13px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:right}
+.rung{align-self:stretch;border-left:3px solid var(--line);border-right:3px solid var(--line);position:relative}
+.rung::after{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:var(--line)}
+.pass .rung::after{background:var(--pass);height:5px;margin-top:-2.5px}
+.fail .rung::after{background:var(--margin);opacity:.8}
+.fail .rung::before{content:"×";position:absolute;inset:0;display:grid;place-items:center;color:var(--margin);font-weight:700;font-size:18px;z-index:1;line-height:1}
+.lskill{font-size:14px;color:var(--ink-2);min-width:0;padding-block:4px}
+.pass .lskill,.fail .lskill{color:var(--ink)}
+.lscore{font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.ladder li.you{background:var(--hi-soft)}
+.ladder li.you .lage{color:var(--ink)}
+.ladder li.you .lskill{font-weight:700}
+details{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:12px 16px}
+summary{font-weight:700;cursor:pointer}
+.review{margin:10px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font-size:15px}
+.review .q{font-weight:700}
+.review .dots{gap:3px;padding:4px;margin:4px 0}
+.review .dots i{width:10px;height:10px}
+.review .fr{font-size:.85em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.okm{color:var(--pass);font-weight:700}.badm{color:var(--margin);font-weight:700}
+.actions{display:flex;flex-direction:column;gap:10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<main id="app">
+  <section id="intro" class="screen">
+    <div class="brand">
+      <p class="eyebrow">Maths age check · ages 4 to 16</p>
+      <h1>Number Ladder</h1>
+      <p>A short adaptive maths test. It climbs and drops half-year rungs until it finds the level your child is secure at.</p>
+      <div>
+        <div class="rungs" aria-hidden="true" id="rungDeco"></div>
+        <div class="rungs-lab"><span>4y 0m</span><span>10y 0m</span><span>16y 0m</span></div>
+      </div>
+    </div>
+    <form class="form sheet" id="setup">
+      <div class="field">
+        <label for="name">Name (optional)</label>
+        <input id="name" autocomplete="off" placeholder="e.g. Sam">
+      </div>
+      <div class="field">
+        <span class="lab">Actual age</span>
+        <div class="row2">
+          <select id="years" aria-label="Years"></select>
+          <select id="months" aria-label="Months"></select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="reveal"> Show whether each answer is right. Leave off for a calmer test.</label>
+      <button class="primary" type="submit">Start the test</button>
+      <p class="fine">Usually 12 to 20 questions. From about age 10 upward, paper and a pencil help. No calculator.</p>
+    </form>
+  </section>
+
+  <section id="test" class="screen" hidden>
+    <div class="bar">
+      <button class="ghost" id="stop" type="button">Stop</button>
+      <span id="qnum">Question 1</span>
+      <button class="ghost" id="skip" type="button">I don't know</button>
+    </div>
+    <div class="sheet">
+      <div class="qmark" id="qmark">1)</div>
+      <div id="prompt" class="prompt"></div>
+      <div id="answerBox" class="answer" aria-live="polite"><span class="caret"></span></div>
+    </div>
+    <div class="keypad" id="keypad"></div>
+    <div class="choices" id="choices" hidden></div>
+  </section>
+
+  <section id="result" class="screen" hidden>
+    <div class="res-head">
+      <p class="eyebrow" id="resFor">Maths age</p>
+      <h1 id="ageBig"></h1>
+      <p id="compare"></p>
+    </div>
+    <div class="skills">
+      <div class="skill sec"><span class="eyebrow">Secure at</span><p id="secure"></p></div>
+      <div class="skill"><span class="eyebrow">Next step</span><p id="nextstep"></p></div>
+    </div>
+    <h2>The ladder</h2>
+    <ol class="ladder" id="ladder"></ol>
+    <details><summary id="revSum">Answers</summary><ol class="review" id="review"></ol></details>
+    <p class="fine">An informal estimate matched to typical UK National Curriculum expectations for each half-year. It is not a standardised or normed test. Treat the result as accurate to about six months either way, and retest on a different day before drawing conclusions.</p>
+    <div class="actions"><button class="primary" id="again" type="button">Test again</button></div>
+  </section>
+</main>
+
+<script>
+/* ---------- helpers ---------- */
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
+const sn=n=>n<0?'−'+(-n):String(n);
+const pm=n=>n<0?'− '+(-n):'+ '+n;
+const fmt=n=>{const s=String(Math.round(n*1e6)/1e6);return s.startsWith('-')?'−'+s.slice(1):s};
+const frac=(n,d)=>`<span class="fr"><span>${n}</span><span>${d}</span></span>`;
+const F=(n,d)=>{const g=gcd(n,d);n/=g;d/=g;return {h:d===1?String(n):frac(n,d),v:n/d}};
+const num=(prompt,answer,long)=>({type:'num',prompt,answer,long});
+function mc(prompt,correct,ds,long){
+  const ch=[correct];
+  for(const d of ds){if(ch.length>=4)break;if(ch.some(c=>same(c,d)))continue;ch.push(d)}
+  return {type:'mc',prompt,choices:shuffle(ch),answer:correct,long};
+}
+function same(a,b){if(a.h===b.h)return true;if(typeof a.v==='number'&&typeof b.v==='number')return Math.abs(a.v-b.v)<1e-9;return a.v===b.v}
+function dots(n,cols){const cells=cols*cols;const on=new Set(shuffle([...Array(cells).keys()]).slice(0,n));
+  let s=`<span class="dots" style="grid-template-columns:repeat(${cols},auto)">`;for(let i=0;i<cells;i++)s+=`<i class="${on.has(i)?'on':''}"></i>`;return s+'</span>'}
+const sq=m=>`√<span class="rad">${m}</span>`;
+const S=(k,m)=>({h:`${k===1?'':k}${sq(m)}`,v:k*Math.sqrt(m)});
+
+/* ---------- half-year bands (4y0m … 16y0m) ---------- */
+const BANDS=[
+ {skill:'Counts up to 5 objects',gen:()=>{const n=R(1,5);return num(`How many dots?<br>${dots(n,3)}`,n,true)}},
+ {skill:'Counts up to 10 objects',gen:()=>{const n=R(6,10);return num(`How many dots?<br>${dots(n,4)}`,n,true)}},
+ {skill:'One more, one less, adding within 5',gen:()=>pick([
+   ()=>{const n=R(2,9);return num(`What is one more than ${n}?`,n+1,true)},
+   ()=>{const n=R(2,10);return num(`What is one less than ${n}?`,n-1,true)},
+   ()=>{const a=R(1,3),b=R(1,5-a);return num(`${a} + ${b}`,a+b)}])()},
+ {skill:'Adding within 10, number bonds to 10',gen:()=>pick([
+   ()=>{const a=R(1,9);return num(`${a} + ? = 10`,10-a)},
+   ()=>{const a=R(2,6),b=R(2,10-a);return num(`${a} + ${b}`,a+b)}])()},
+ {skill:'Adding and subtracting within 20',gen:()=>pick([
+   ()=>{const a=R(6,12),b=R(3,20-a);return num(`${a} + ${b}`,a+b)},
+   ()=>{const a=R(11,20),b=R(2,9);return num(`${a} − ${b}`,a-b)}])()},
+ {skill:'Doubles, halves, counting in 2s, 5s and 10s',gen:()=>pick([
+   ()=>{const n=R(6,10);return num(`Double ${n}`,2*n)},
+   ()=>{const n=2*R(3,10);return num(`Half of ${n}`,n/2)},
+   ()=>{const s=pick([2,5,10]),a=s*R(1,5);return num(`${a}, ${a+s}, ${a+2*s}, ?`,a+3*s)}])()},
+ {skill:'Tens and ones, adding a 1-digit number',gen:()=>pick([
+   ()=>{const o=R(1,4),a=R(2,8)*10+o,b=R(1,9-o);return num(`${a} + ${b}`,a+b)},
+   ()=>{const a=R(1,5),b=R(1,9-a);return num(`${a*10} + ${b*10}`,(a+b)*10)},
+   ()=>{const n=R(21,98);return num(`How many tens are in ${n}?`,Math.floor(n/10),true)}])()},
+ {skill:'2, 5 and 10 times tables, 2-digit adding',gen:()=>pick([
+   ()=>{const t=pick([2,5,10]),k=R(2,12);return num(`${k} × ${t}`,k*t)},
+   ()=>{const t1=R(1,7),t2=R(1,8-t1),o1=R(1,5),o2=R(1,9-o1);const a=t1*10+o1,b=t2*10+o2;return num(`${a} + ${b}`,a+b)}])()},
+ {skill:'Adding and subtracting with exchanging',gen:()=>pick([
+   ()=>{let a,b;do{a=R(15,69);b=R(12,29)}while(a%10+b%10<10);return num(`${a} + ${b}`,a+b)},
+   ()=>{let a,b;do{a=R(41,95);b=R(12,a-10)}while(b%10<=a%10);return num(`${a} − ${b}`,a-b)}])()},
+ {skill:'3, 4 and 8 times tables, 3-digit adding',gen:()=>pick([
+   ()=>{const t=pick([3,4,8]),k=R(3,12);return num(`${k} × ${t}`,k*t)},
+   ()=>{const a=R(120,599),b=R(110,399);return num(`${a} + ${b}`,a+b)}])()},
+ {skill:'Division facts, 3-digit subtracting',gen:()=>pick([
+   ()=>{const t=pick([3,4,6,8]),k=R(3,12);return num(`${t*k} ÷ ${t}`,k)},
+   ()=>{let a,b;do{a=R(301,902);b=R(115,a-100)}while(b%10<=a%10);return num(`${a} − ${b}`,a-b)}])()},
+ {skill:'All tables to 12 × 12, fractions of amounts',gen:()=>pick([
+   ()=>{const a=R(6,12),b=R(6,12);return num(`${a} × ${b}`,a*b)},
+   ()=>{const d=pick([3,4,5,8]),n=R(1,d-1),m=d*R(3,9);return num(`${frac(n,d)} of ${m}`,n*m/d)}])()},
+ {skill:'Short multiplication, rounding',gen:()=>pick([
+   ()=>{const a=R(23,89),b=R(3,9);return num(`${a} × ${b}`,a*b)},
+   ()=>{const to=pick([10,100]);let n;do{n=R(1100,9899)}while((to===100?Math.floor(n/10)%10:n%10)%5===0);
+     return num(`Round ${n.toLocaleString('en-GB')} to the nearest ${to}`,Math.round(n/to)*to,true)}])()},
+ {skill:'Decimals, equivalent fractions',gen:()=>pick([
+   ()=>{const a=R(11,89),b=R(101,899);return num(`${fmt(a/10)} + ${fmt(b/100)}`,(a*10+b)/100)},
+   ()=>{let n,d;do{d=pick([3,4,5,6]);n=R(1,d-1)}while(gcd(n,d)!==1);const k=R(2,4);return num(`${frac(n,d)} = ${frac('?',d*k)}`,n*k)}])()},
+ {skill:'Long multiplication, factors, simple percentages',gen:()=>pick([
+   ()=>{const a=R(12,49),b=R(12,39);return num(`${a} × ${b}`,a*b)},
+   ()=>{const p=pick([10,20,25,50,75]),m=R(2,12)*20;return num(`${p}% of ${m}`,p*m/100)},
+   ()=>{const n=pick([12,18,20,24,30,36]);let c=0;for(let i=1;i<=n;i++)if(n%i===0)c++;return num(`How many factors does ${n} have?`,c,true)}])()},
+ {skill:'Adding fractions, square numbers, ×10 and ×100',gen:()=>pick([
+   ()=>{const n=R(11,15);return num(`${n}<sup>2</sup>`,n*n)},
+   ()=>{const x=R(12,99)/10,m=pick([10,100,1000]);return num(`${fmt(x)} × ${m}`,Math.round(x*m))},
+   ()=>{const d=pick([6,8,10,12]),h=d/2,a=pick([1,3,5].filter(v=>v<d)),b=R(1,h-1);
+     return mc(`${frac(a,d)} + ${frac(b,h)}`,F(a+2*b,d),[F(a+b,d+h),F(a+b,d),F(a+b,h),F(a+2*b+1,d)])}])()},
+ {skill:'Order of operations, negatives, percentages',gen:()=>pick([
+   ()=>{const a=R(2,9),b=R(2,9),c=R(2,9);return num(`${a} + ${b} × ${c}`,a+b*c)},
+   ()=>{const a=-R(2,9),b=R(2,9);return pick([num(`${sn(a)} + ${b}`,a+b),num(`${sn(a)} − ${b}`,a-b)])},
+   ()=>{const p=pick([15,35,45,65]),m=R(2,9)*20;return num(`${p}% of ${m}`,p*m/100)}])()},
+ {skill:'One-step equations, substitution',gen:()=>pick([
+   ()=>{const a=R(3,9),x=R(2,12);return num(`${a}x = ${a*x}<span class="sub">What is x?</span>`,x)},
+   ()=>{const a=R(3,15),x=R(a+2,30);return num(`x − ${a} = ${x-a}<span class="sub">What is x?</span>`,x)},
+   ()=>{const a=R(2,9),b=-R(1,9);return num(`2a + b<span class="sub">when a = ${a} and b = ${sn(b)}</span>`,2*a+b)}])()},
+ {skill:'Two-step equations, ratio, multiplying negatives',gen:()=>pick([
+   ()=>{const a=R(2,9),x=R(2,10),c=R(1,15);return num(`${a}x + ${c} = ${a*x+c}<span class="sub">What is x?</span>`,x)},
+   ()=>{const [p,q]=pick([[2,3],[3,5],[1,4],[3,4],[2,5]]),u=R(3,12);return num(`Share ${(p+q)*u} in the ratio ${p} : ${q}. What is the larger share?`,q*u,true)},
+   ()=>{const a=R(2,9),b=R(2,9);return num(`(−${a}) × (−${b})`,a*b)}])()},
+ {skill:'Area of triangles, substitution with squares, dividing fractions',gen:()=>pick([
+   ()=>{const b=2*R(2,8),h=R(3,12);return num(`A triangle has base ${b} cm and height ${h} cm. What is its area in cm²?`,b*h/2,true)},
+   ()=>{const a=-R(2,7),b=R(1,9);return num(`a<sup>2</sup> − b<span class="sub">when a = ${sn(a)} and b = ${b}</span>`,a*a-b)},
+   ()=>{let a,b,c,d;do{b=R(3,9);a=R(1,b-1);d=R(2,6);c=R(1,d-1)}while(gcd(a,b)!==1||gcd(c,d)!==1);
+     return mc(`${frac(a,b)} ÷ ${frac(c,d)}`,F(a*d,b*c),[F(a*c,b*d),F(b*c,a*d),F(a*d+1,b*c),F(a+d,b+c)])}])()},
+ {skill:'Unknowns on both sides, powers, standard form',gen:()=>pick([
+   ()=>{const x=R(2,9),a=R(4,9),b=R(1,a-1),c=R(1,10);return num(`${a}x + ${c} = ${b}x + ${a*x+c-b*x}<span class="sub">What is x?</span>`,x)},
+   ()=>{const [b,e]=pick([[2,4],[2,5],[2,6],[2,7],[3,3],[3,4],[3,5]]);return num(`${b}<sup>${e}</sup>`,b**e)},
+   ()=>{let m;do{m=R(11,99)}while(m%10===0);const e=R(3,6),d1=Math.floor(m/10),d2=m%10,n=m*10**(e-1);
+     const o=(a,ex)=>({h:`${a} × 10<sup>${ex}</sup>`,v:`${a}|${ex}`});
+     return mc(`Write ${n.toLocaleString('en-GB')} in standard form`,o(`${d1}.${d2}`,e),[o(m,e-1),o(`${d1}.${d2}`,e-1),o(`${d1}.${d2}`,e+1),o(`0.${m}`,e+1)],true)}])()},
+ {skill:"Pythagoras' theorem, percentage change, probability",gen:()=>pick([
+   ()=>{const [a,b,c]=pick([[3,4,5],[5,12,13],[8,15,17],[6,8,10],[7,24,25]]),k=pick([1,1,2,3]);
+     return num(`A right-angled triangle has shorter sides ${a*k} cm and ${b*k} cm. How long is the longest side?`,c*k,true)},
+   ()=>{const p=R(4,20)*20,c=pick([15,20,35,40]);return num(`A £${p} coat is reduced by ${c}%. What is the new price in £?`,p*(100-c)/100,true)},
+   ()=>{const r=R(2,7),b=R(2,7);return mc(`A bag has ${r} red and ${b} blue counters. What is the probability of picking red?`,F(r,r+b),[F(r,b),F(b,r+b),F(1,r+b),F(r,r+b+1)],true)}])()},
+ {skill:'Factorising and solving quadratics',gen:()=>pick([
+   ()=>{let p,q;do{p=R(1,7);q=R(1,7)}while(p===q);
+     const o=(a,b)=>({h:`(x ${pm(a)})(x ${pm(b)})`,v:`${a+b}|${a*b}`});
+     return mc(`Factorise x<sup>2</sup> ${pm(p+q)}x ${pm(p*q)}`,o(p,q),[o(-p,-q),o(p,-q),o(1,p*q),o(2*p,q)],true)},
+   ()=>{const r1=R(2,8),r2=-R(1,6);const b=-(r1+r2),c=r1*r2;
+     const bt=b===0?'':` ${b<0?'−':'+'} ${Math.abs(b)===1?'':Math.abs(b)}x`;
+     return num(`x<sup>2</sup>${bt} ${pm(c)} = 0<span class="sub">What is the positive solution?</span>`,r1,true)}])()},
+ {skill:'Surds, fractional and negative indices, exact trig values',gen:()=>pick([
+   ()=>{const m=pick([2,3,5,6,7]),k=R(2,5);return mc(`Simplify ${sq(k*k*m)}`,S(k,m),[S(m,k),S(k*k,m),S(k,k*m),S(k+1,m)])},
+   ()=>{const [b,e,v]=pick([['8','2/3',4],['27','2/3',9],['64','2/3',16],['16','3/4',8],['25','3/2',125],['4','−1/2',0.5],['2','−3',0.125]]);
+     return num(`${b}<sup>${e}</sup>`,v)},
+   ()=>{const [t,v]=pick([['sin 30°',0.5],['cos 60°',0.5],['tan 45°',1],['sin 90°',1],['cos 0°',1]]);return num(`${t}`,v)}])()},
+ {skill:'Simultaneous equations, gradients, completing the square',gen:()=>pick([
+   ()=>{const x=R(1,8),y=R(1,8),a=R(2,4);return num(`${a}x + y = ${a*x+y}<br>x − y = ${sn(x-y)}<span class="sub">What is x?</span>`,x,true)},
+   ()=>{const x1=R(-3,3),dx=R(1,4),m=pick([-3,-2,-1,1,2,3,4,5]),y1=R(-5,5);
+     return num(`What is the gradient of the line through (${sn(x1)}, ${sn(y1)}) and (${sn(x1+dx)}, ${sn(y1+m*dx)})?`,m,true)},
+   ()=>{const h=R(1,5),c=R(1,20);const o=(hh,k)=>({h:`(x ${pm(hh)})<sup>2</sup> ${pm(k)}`,v:`${hh}|${k}`});
+     return mc(`Write x<sup>2</sup> + ${2*h}x + ${c} in the form (x + a)<sup>2</sup> + b`,o(h,c-h*h),[o(2*h,c-4*h*h),o(h,c+h*h),o(-h,c-h*h),o(h,c)],true)}])()},
+];
+const N=BANDS.length;
+const bandAge=b=>({y:4+Math.floor(b/2),m:(b%2)*6});
+const ageLong=({y,m})=>`${y} ${y===1?'year':'years'} ${m} months`;
+const ageShort=({y,m})=>`${y}y ${m}m`;
+
+/* ---------- intro ---------- */
+const $=id=>document.getElementById(id);
+$('rungDeco').innerHTML=[...Array(25)].map((_,i)=>`<span style="height:${30+i*2.8}%"></span>`).join('');
+$('years').innerHTML='<option value="">Not sure</option>'+[...Array(13)].map((_,i)=>`<option value="${i+4}">${i+4} years</option>`).join('')+'<option value="adult">Adult</option>';
+$('months').innerHTML=[...Array(12)].map((_,i)=>`<option value="${i}">${i} months</option>`).join('');
+$('years').value='8';
+
+let st=null;
+$('setup').addEventListener('submit',e=>{
+  e.preventDefault();
+  const y=$('years').value,m=+$('months').value;
+  let start=6,chrono=null;
+  if(y==='adult')start=20;
+  else if(y){chrono=(+y)*12+m;start=Math.max(0,Math.min(N-1,Math.floor((chrono-48)/6)-2))}
+  st={res:Array.from({length:N},()=>({r:0,t:0,status:null})),cur:start,log:[],q:null,used:new Set(),
+      reveal:$('reveal').checked,name:$('name').value.trim(),chrono,busy:false,input:''};
+  show('test');nextQuestion();
+});
+
+function show(id){for(const s of ['intro','test','result'])$(s).hidden=s!==id;window.scrollTo(0,0)}
+
+/* ---------- keypad ---------- */
+const keys=['1','2','3','4','5','6','7','8','9','−','0','.','⌫','OK'];
+$('keypad').innerHTML=keys.map(k=>`<button type="button" class="key${k==='OK'?' enter':''}${k==='⌫'||k==='−'||k==='.'?' small':''}" data-k="${k}" aria-label="${k==='⌫'?'Delete':k==='OK'?'Enter answer':k==='−'?'Minus':k==='.'?'Decimal point':k}">${k==='OK'?'Enter':k}</button>`).join('');
+$('keypad').addEventListener('click',e=>{const b=e.target.closest('.key');if(b)press(b.dataset.k)});
+document.addEventListener('keydown',e=>{
+  if($('test').hidden||!st||st.q?.type!=='num')return;
+  if(/^[0-9]$/.test(e.key))press(e.key);else if(e.key==='.'||e.key===',')press('.');
+  else if(e.key==='-')press('−');else if(e.key==='Backspace')press('⌫');else if(e.key==='Enter'){e.preventDefault();press('OK')}
+});
+function press(k){
+  if(st.busy)return;
+  if(k==='⌫')st.input=st.input.slice(0,-1);
+  else if(k==='OK'){if(st.input&&st.input!=='−'&&st.input!=='.')submit(st.input);return}
+  else if(k==='−'){st.input=st.input.startsWith('−')?st.input.slice(1):'−'+st.input}
+  else if(k==='.'){if(!st.input.includes('.')&&st.input.length<8)st.input+='.'}
+  else if(st.input.replace('−','').length<8)st.input+=k;
+  drawInput();
+}
+function drawInput(){$('answerBox').className='answer';$('answerBox').innerHTML=`<span>${st.input}</span><span class="caret"></span>`}
+
+/* ---------- test engine ---------- */
+function nextQuestion(){
+  let q,tries=0;
+  do{q=BANDS[st.cur].gen();tries++}while(st.used.has(q.prompt)&&tries<15);
+  st.used.add(q.prompt);st.q=q;st.input='';st.busy=false;
+  const n=st.log.length+1;
+  $('qnum').textContent=`Question ${n}`;$('qmark').textContent=n+')';
+  const p=$('prompt');p.innerHTML=q.prompt;p.className='prompt written'+(q.long?' long':'');
+  if(q.type==='num'){
+    $('keypad').hidden=false;$('choices').hidden=true;$('answerBox').hidden=false;drawInput();
+  }else{
+    $('keypad').hidden=true;$('answerBox').hidden=true;$('choices').hidden=false;
+    $('choices').innerHTML=q.choices.map((c,i)=>`<button type="button" class="choice" data-i="${i}"><b>${'ABCD'[i]}</b><span>${c.h}</span></button>`).join('');
+  }
+}
+$('choices').addEventListener('click',e=>{const b=e.target.closest('.choice');if(b&&!st.busy)submit(+b.dataset.i,b)});
+$('skip').addEventListener('click',()=>{if(!st.busy)submit(null)});
+
+function submit(val,btn){
+  st.busy=true;const q=st.q;let ok=false,given='',correct='';
+  if(q.type==='num'){
+    correct=fmt(q.answer);
+    if(val!==null){given=val;const v=Number(val.replace('−','-'));ok=Number.isFinite(v)&&Math.abs(v-q.answer)<1e-9}
+  }else{
+    correct=q.answer.h;
+    if(val!==null){const c=q.choices[val];given=c.h;ok=same(c,q.answer)}
+  }
+  const r=st.res[st.cur];r.t++;if(ok)r.r++;
+  st.log.push({band:st.cur,prompt:q.prompt,given,correct,ok});
+  if(r.r>=2)r.status='pass';else if(r.t-r.r>=2)r.status='fail';
+  if(st.reveal&&val!==null){
+    if(q.type==='num')$('answerBox').classList.add(ok?'ok':'bad');else btn.classList.add(ok?'ok':'bad');
+  }
+  setTimeout(advance,st.reveal&&val!==null?700:220);
+}
+function bounds(){
+  let hi=-1;st.res.forEach((x,b)=>{if(x.status==='pass')hi=Math.max(hi,b)});
+  let lo=N;st.res.forEach((x,b)=>{if(x.status==='fail'&&b>hi)lo=Math.min(lo,b)});
+  return {hi,lo};
+}
+function advance(){
+  if(st.res[st.cur].status){
+    const {hi,lo}=bounds();
+    if(lo===hi+1||hi===N-1||lo===0||st.log.length>=40)return finish();
+    st.cur=lo===N?Math.min(N-1,hi+2):hi===-1?Math.max(0,lo-2):Math.floor((hi+lo)/2);
+  }else if(st.log.length>=40)return finish();
+  nextQuestion();
+}
+let stopArmed=null;
+$('stop').addEventListener('click',()=>{
+  const b=$('stop');
+  if(stopArmed){clearTimeout(stopArmed);stopArmed=null;b.textContent='Stop';b.classList.remove('warn');st.log.length?finish(true):show('intro');return}
+  b.textContent='Tap again to stop';b.classList.add('warn');
+  stopArmed=setTimeout(()=>{stopArmed=null;b.textContent='Stop';b.classList.remove('warn')},3000);
+});
+
+/* ---------- results ---------- */
+function finish(early){
+  const {hi}=bounds();show('result');
+  $('resFor').textContent=st.name?`Maths age for ${st.name}`:'Maths age';
+  let big,mm=null;
+  if(hi===-1)big='Below 4 years';
+  else if(hi===N-1){big='16 years or above';mm=192}
+  else{const a=bandAge(hi);big=ageLong(a);mm=a.y*12+a.m}
+  $('ageBig').textContent=big;
+  let cmp=early?'The test was stopped early, so this is a rough estimate. ':'';
+  if(st.chrono!=null&&mm!=null){
+    const d=mm-st.chrono,ad=Math.abs(d),ay=Math.floor(st.chrono/12),am=st.chrono%12;
+    const dd=`${Math.floor(ad/12)} ${Math.floor(ad/12)===1?'year':'years'} ${ad%12} months`;
+    if(hi===N-1&&d<0)cmp+='They reached the top of the ladder.';
+    else if(ad<6)cmp+=`In line with their actual age of ${ageLong({y:ay,m:am})}.`;
+    else cmp+=`${dd} ${d>0?'above':'below'} their actual age of ${ageLong({y:ay,m:am})}.`;
+  }
+  $('compare').textContent=cmp;
+  $('secure').textContent=hi>=0?BANDS[hi].skill:'Not yet secure at counting to 5';
+  $('nextstep').textContent=hi<N-1?BANDS[hi+1].skill:'Beyond this test. Try GCSE-style problems.';
+  let L='';
+  for(let b=N-1;b>=0;b--){
+    const x=st.res[b],cls=[x.status||'',b===hi?'you':''].join(' ');
+    const sc=x.t?`${x.r}/${x.t}`:'';
+    L+=`<li class="${cls}"><span class="lage">${ageShort(bandAge(b))}</span><span class="rung" aria-hidden="true"></span><span class="lskill">${BANDS[b].skill}</span><span class="lscore">${sc}${x.status?` <span class="sr">${x.status==='pass'?'secure':'not yet'}</span>`:''}</span></li>`;
+  }
+  $('ladder').innerHTML=L;
+  $('revSum').textContent=`Answers (${st.log.filter(l=>l.ok).length} of ${st.log.length} right)`;
+  $('review').innerHTML=st.log.map(l=>`<li><div class="q">${l.prompt}</div><div>${l.ok?'<span class="okm">Right</span>':'<span class="badm">Not yet</span>'} · answer given: ${l.given||'skipped'}${l.ok?'':` · correct: ${l.correct}`} <span class="fine">(${ageShort(bandAge(l.band))} level)</span></div></li>`).join('');
+}
+$('again').addEventListener('click',()=>show('intro'));
+</script>
+
+</body>
+</html>
